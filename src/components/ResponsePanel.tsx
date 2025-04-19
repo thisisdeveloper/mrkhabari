@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Clock, Code, Download, FileJson, Image, Table, X, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, Code, Download, FileJson, Image, Table, XCircle } from 'lucide-react';
 import { useStore } from '../store';
 
 export function ResponsePanel() {
@@ -7,7 +7,7 @@ export function ResponsePanel() {
   const [view, setView] = React.useState<'preview' | 'raw' | 'headers'>('preview');
   const [format, setFormat] = React.useState<'json' | 'table' | 'image'>('json');
 
-  const isSuccess = response?.status >= 200 && response?.status < 300;
+  const isSuccess = response && response.status >= 200 && response.status < 300;
 
   const handleDownload = () => {
     if (!response) return;

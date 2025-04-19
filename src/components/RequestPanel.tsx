@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Play, Plus, Save, FileJson, X } from 'lucide-react';
 import { useStore } from '../store';
 import { sendRequest } from '../utils/api';
-import { Method, QueryParam, AuthType } from '../types';
+import { Method } from '../types';
 import { Editor } from '@monaco-editor/react';
-import { formatJSON, isValidJSON } from '../utils/jsonFormatter';
+import { formatJSON } from '../utils/jsonFormatter';
 import { parseQueryString, buildUrl, getBaseUrl } from '../utils/urlUtils';
 import { Authorization } from './Authorization';
 
@@ -14,7 +14,7 @@ const bodyAllowedMethods = ['POST', 'PUT', 'PATCH'];
 const editorOptions = {
   minimap: { enabled: false },
   fontSize: 13,
-  lineNumbers: 'off',
+  lineNumbers: 'off' as const,
   folding: false,
   lineDecorationsWidth: 0,
   lineNumbersMinChars: 0,
@@ -118,7 +118,6 @@ export function RequestPanel() {
   const handleUrlChange = (url: string) => {
     if (!activeRequest) return;
 
-    // Extract query parameters from URL
     const params = parseQueryString(url);
     const baseUrl = getBaseUrl(url);
 
@@ -128,19 +127,17 @@ export function RequestPanel() {
     });
   };
 
-  const handleParamChange = (index: number, key: string, value: string, enabled: boolean = true) => {
+  const handleParamChange = (paramIndex: number, key: string, value: string, enabled: boolean = true) => {
     if (!activeRequest) return;
 
     const newParams = [...currentParams];
     
-    // Update existing param or add new one
-    if (index < newParams.length) {
-      newParams[index] = { key, value, enabled };
+    if (paramIndex < newParams.length) {
+      newParams[paramIndex] = { key, value, enabled };
     } else {
       newParams.push({ key, value, enabled });
     }
 
-    // Remove empty params at the end
     while (newParams.length > 0 && !newParams[newParams.length - 1].key && !newParams[newParams.length - 1].value) {
       newParams.pop();
     }
@@ -166,7 +163,6 @@ export function RequestPanel() {
     updateTab(activeRequest.id, { params: newParams });
   };
 
-  // Update URL when params change
   useEffect(() => {
     if (!activeRequest) return;
     
@@ -180,7 +176,6 @@ export function RequestPanel() {
     if (!activeRequest) return;
     
     setIsLoading(true);
-    const startTime = performance.now();
     
     try {
       const response = await sendRequest(activeRequest);
@@ -189,7 +184,8 @@ export function RequestPanel() {
         ...activeRequest,
         timestamp: Date.now()
       });
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error('Request failed:', error);
       setResponse({
         status: 0,

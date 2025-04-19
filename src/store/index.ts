@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { RequestTab, ResponseData, Method, QueryParam, AuthConfig } from '../types';
-import { generateAuthHeaders } from '../utils/requestUtils';
-import { buildUrl } from '../utils/urlUtils';
+import { RequestTab, ResponseData } from '../types';
 
 interface AppState {
   tabs: RequestTab[];

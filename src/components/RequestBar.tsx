@@ -1,4 +1,3 @@
-import React from 'react';
 import { Send } from 'lucide-react';
 
 const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Layout } from './components/Layout';
 import { RequestPanel } from './components/RequestPanel';
 import { ResponsePanel } from './components/ResponsePanel';
