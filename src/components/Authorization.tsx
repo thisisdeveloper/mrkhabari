@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React from 'react'; // Explicitly use React
 import { AuthType } from '../types';
 import { useStore } from '../store';
 
