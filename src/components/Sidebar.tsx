@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Archive, Book, Clock, FolderTree, History, Search, Settings } from 'lucide-react';
+import { Book, Clock, FolderTree, History, Search, Settings } from 'lucide-react';
 import { ContextMenu } from './ContextMenu';
 import { useStore } from '../store';
 
@@ -16,13 +17,18 @@ export function Sidebar() {
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; item: MenuItem } | null>(null);
   const [items, setItems] = React.useState<MenuItem[]>([]);
 
-  // Initialize items from tabs and history
+  // Initialize items from saved tabs and history
   React.useEffect(() => {
     const newItems: MenuItem[] = [];
     
-    // Group tabs by their names to create collections
+    // Group tabs by their names to create collections, but only include saved ones
     const collections = new Map<string, string[]>();
     tabs.forEach(tab => {
+      // Skip tabs that haven't been explicitly saved
+      if (!tab.name.includes('/')) {
+        return;
+      }
+      
       const collectionName = tab.name.split('/')[0];
       if (!collections.has(collectionName)) {
         collections.set(collectionName, []);
@@ -54,10 +60,10 @@ export function Sidebar() {
     });
 
     // Add recent requests from history
-    history.slice(0, 5).forEach((request, index) => {
+    history.slice(0, 5).forEach((historyItem, index) => {
       newItems.push({
         id: `recent-${index}`,
-        label: `${request.request.method} ${request.request.url}`,
+        label: `${historyItem.request.method} ${historyItem.request.url}`,
         type: 'recent'
       });
     });
