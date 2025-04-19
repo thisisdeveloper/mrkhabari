@@ -26,8 +26,8 @@ const editorOptions = {
   hideCursorInOverviewRuler: true,
   overviewRulerBorder: false,
   scrollbar: {
-    vertical: 'hidden',
-    horizontal: 'hidden',
+    vertical: 'hidden' as const,
+    horizontal: 'hidden' as const,
   },
 };
 
@@ -201,7 +201,7 @@ export function RequestPanel() {
     }
   };
 
-  const handleHeaderChange = (index: number, key: string, value: string) => {
+  const handleHeaderChange = (headerIndex: number, key: string, value: string) => {
     if (!activeRequest) return;
     
     const headers = { ...activeRequest.headers };

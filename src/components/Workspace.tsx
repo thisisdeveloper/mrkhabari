@@ -1,4 +1,3 @@
-import React from 'react';
 import { Hash, Code2, Database, Clock } from 'lucide-react';
 
 const collections = [
