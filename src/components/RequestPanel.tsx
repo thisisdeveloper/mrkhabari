@@ -21,7 +21,7 @@ const editorOptions = {
   automaticLayout: true,
   padding: { top: 8, bottom: 8 },
   scrollBeyondLastLine: false,
-  renderLineHighlight: 'none',
+  renderLineHighlight: 'none' as 'none' | 'line' | 'gutter' | 'all',
   overviewRulerLanes: 0,
   hideCursorInOverviewRuler: true,
   overviewRulerBorder: false,
@@ -201,7 +201,7 @@ export function RequestPanel() {
     }
   };
 
-  const handleHeaderChange = (headerIndex: number, key: string, value: string) => {
+  const handleHeaderChange = (_headerIndex: number, key: string, value: string) => {
     if (!activeRequest) return;
     
     const headers = { ...activeRequest.headers };
