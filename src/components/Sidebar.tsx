@@ -1,6 +1,7 @@
 import React from 'react';
 import { Archive, Book, Clock, FolderTree, History, Search, Settings } from 'lucide-react';
 import { ContextMenu } from './ContextMenu';
+import { useStore } from '../store';
 
 interface MenuItem {
   id: string;
@@ -10,21 +11,59 @@ interface MenuItem {
 }
 
 export function Sidebar() {
+  const { tabs, history } = useStore();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; item: MenuItem } | null>(null);
-  const [items, setItems] = React.useState<MenuItem[]>([
-    { id: '1', label: 'Authentication', type: 'collection' },
-    { id: '2', label: 'Login Request', type: 'request', parentId: '1' },
-    { id: '3', label: 'Register Request', type: 'request', parentId: '1' },
-    { id: '4', label: 'Users', type: 'collection' },
-    { id: '5', label: 'Get Users', type: 'request', parentId: '4' },
-    { id: '6', label: 'Create User', type: 'request', parentId: '4' },
-    { id: '7', label: 'Products', type: 'collection' },
-    { id: '8', label: 'Product List', type: 'request', parentId: '7' },
-    { id: '9', label: 'Login Flow', type: 'saved' },
-    { id: '10', label: 'User Creation', type: 'saved' },
-    { id: '11', label: 'GET /users', type: 'recent' },
-  ]);
+  const [items, setItems] = React.useState<MenuItem[]>([]);
+
+  // Initialize items from tabs and history
+  React.useEffect(() => {
+    const newItems: MenuItem[] = [];
+    
+    // Group tabs by their names to create collections
+    const collections = new Map<string, string[]>();
+    tabs.forEach(tab => {
+      const collectionName = tab.name.split('/')[0];
+      if (!collections.has(collectionName)) {
+        collections.set(collectionName, []);
+      }
+      collections.get(collectionName)?.push(tab.id);
+    });
+
+    // Create collection items
+    collections.forEach((tabIds, name) => {
+      const collectionId = `collection-${name}`;
+      newItems.push({
+        id: collectionId,
+        label: name,
+        type: 'collection'
+      });
+
+      // Add requests under collections
+      tabIds.forEach(tabId => {
+        const tab = tabs.find(t => t.id === tabId);
+        if (tab) {
+          newItems.push({
+            id: tab.id,
+            label: `${tab.method} ${tab.url}`,
+            type: 'request',
+            parentId: collectionId
+          });
+        }
+      });
+    });
+
+    // Add recent requests from history
+    history.slice(0, 5).forEach((request, index) => {
+      newItems.push({
+        id: `recent-${index}`,
+        label: `${request.request.method} ${request.request.url}`,
+        type: 'recent'
+      });
+    });
+
+    setItems(newItems);
+  }, [tabs, history]);
 
   const filteredItems = items.filter(item => 
     item.label.toLowerCase().includes(searchQuery.toLowerCase())
@@ -126,24 +165,6 @@ export function Sidebar() {
             </button>
           </div>
           {renderCollectionItems()}
-        </div>
-
-        <div>
-          <div className="px-3 mb-2 flex items-center">
-            <Archive className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Saved Requests</span>
-          </div>
-          {filteredItems
-            .filter(item => item.type === 'saved')
-            .map((item) => (
-              <button
-                key={item.id}
-                onContextMenu={(e) => handleContextMenu(e, item)}
-                className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition"
-              >
-                {item.label}
-              </button>
-            ))}
         </div>
 
         <div>
