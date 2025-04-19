@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Copy, Edit, Trash2, Share2 } from 'lucide-react';
+import { Folder, Edit, Trash2 } from 'lucide-react';
 
 interface ContextMenuProps {
   x: number;
@@ -23,10 +24,9 @@ export function ContextMenu({ x, y, onClose, onAction }: ContextMenuProps) {
   }, [onClose]);
 
   const actions = [
-    { id: 'duplicate', icon: Copy, label: 'Duplicate' },
+    { id: 'new-folder', icon: Folder, label: 'New Folder' },
     { id: 'rename', icon: Edit, label: 'Rename' },
     { id: 'delete', icon: Trash2, label: 'Delete' },
-    { id: 'share', icon: Share2, label: 'Share' },
   ];
 
   return (

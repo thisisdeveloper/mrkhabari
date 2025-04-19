@@ -1,81 +1,18 @@
 
 import React from 'react';
-import { Book, Clock, FolderTree, History, Search, Settings } from 'lucide-react';
+import { FolderTree, Search, Plus, Folder } from 'lucide-react';
 import { ContextMenu } from './ContextMenu';
 import { useStore } from '../store';
-
-interface MenuItem {
-  id: string;
-  label: string;
-  type: 'collection' | 'request' | 'saved' | 'recent';
-  parentId?: string;
-}
+import { CollectionItem } from '../types';
 
 export function Sidebar() {
-  const { tabs, history } = useStore();
+  const { collections, addCollection, updateCollection, deleteCollection } = useStore();
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; item: MenuItem } | null>(null);
-  const [items, setItems] = React.useState<MenuItem[]>([]);
+  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; item: CollectionItem } | null>(null);
+  const [showNewCollectionInput, setShowNewCollectionInput] = React.useState(false);
+  const [newCollectionName, setNewCollectionName] = React.useState('');
 
-  // Initialize items from saved tabs and history
-  React.useEffect(() => {
-    const newItems: MenuItem[] = [];
-    
-    // Group tabs by their names to create collections, but only include saved ones
-    const collections = new Map<string, string[]>();
-    tabs.forEach(tab => {
-      // Skip tabs that haven't been explicitly saved
-      if (!tab.name.includes('/')) {
-        return;
-      }
-      
-      const collectionName = tab.name.split('/')[0];
-      if (!collections.has(collectionName)) {
-        collections.set(collectionName, []);
-      }
-      collections.get(collectionName)?.push(tab.id);
-    });
-
-    // Create collection items
-    collections.forEach((tabIds, name) => {
-      const collectionId = `collection-${name}`;
-      newItems.push({
-        id: collectionId,
-        label: name,
-        type: 'collection'
-      });
-
-      // Add requests under collections
-      tabIds.forEach(tabId => {
-        const tab = tabs.find(t => t.id === tabId);
-        if (tab) {
-          newItems.push({
-            id: tab.id,
-            label: `${tab.method} ${tab.url}`,
-            type: 'request',
-            parentId: collectionId
-          });
-        }
-      });
-    });
-
-    // Add recent requests from history
-    history.slice(0, 5).forEach((historyItem, index) => {
-      newItems.push({
-        id: `recent-${index}`,
-        label: `${historyItem.request.method} ${historyItem.request.url}`,
-        type: 'recent'
-      });
-    });
-
-    setItems(newItems);
-  }, [tabs, history]);
-
-  const filteredItems = items.filter(item => 
-    item.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleContextMenu = (e: React.MouseEvent, item: MenuItem) => {
+  const handleContextMenu = (e: React.MouseEvent, item: CollectionItem) => {
     e.preventDefault();
     setContextMenu({
       x: e.clientX,
@@ -84,115 +21,101 @@ export function Sidebar() {
     });
   };
 
+  const handleNewCollection = () => {
+    if (newCollectionName.trim()) {
+      addCollection(newCollectionName.trim());
+      setNewCollectionName('');
+      setShowNewCollectionInput(false);
+    }
+  };
+
   const handleAction = (action: string) => {
     if (!contextMenu) return;
 
     switch (action) {
-      case 'duplicate':
-        setItems(prev => [
-          ...prev,
-          { 
-            id: Date.now().toString(),
-            label: `${contextMenu.item.label} (Copy)`,
-            type: contextMenu.item.type,
-            parentId: contextMenu.item.parentId
-          }
-        ]);
-        break;
-      case 'delete':
-        setItems(prev => prev.filter(item => 
-          item.id !== contextMenu.item.id && item.parentId !== contextMenu.item.id
-        ));
+      case 'new-folder':
+        const folderName = prompt('Enter folder name:');
+        if (folderName) {
+          addCollection(folderName, contextMenu.item.id);
+        }
         break;
       case 'rename':
-        const newName = prompt('Enter new name:', contextMenu.item.label);
+        const newName = prompt('Enter new name:', contextMenu.item.name);
         if (newName) {
-          setItems(prev => prev.map(item => 
-            item.id === contextMenu.item.id ? { ...item, label: newName } : item
-          ));
+          updateCollection(contextMenu.item.id, newName);
+        }
+        break;
+      case 'delete':
+        if (confirm('Are you sure you want to delete this item?')) {
+          deleteCollection(contextMenu.item.id);
         }
         break;
     }
+    setContextMenu(null);
   };
 
-  const renderCollectionItems = () => {
-    const collections = filteredItems.filter(item => item.type === 'collection');
-    
-    return collections.map(collection => (
-      <div key={collection.id} className="space-y-1">
-        <button
-          onContextMenu={(e) => handleContextMenu(e, collection)}
-          className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
-        >
-          <FolderTree className="w-4 h-4 text-gray-400" />
-          {collection.label}
-        </button>
+  const renderCollectionItem = (item: CollectionItem) => (
+    <div key={item.id} className="space-y-1">
+      <button
+        onContextMenu={(e) => handleContextMenu(e, item)}
+        className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
+      >
+        {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+        {item.name}
+      </button>
+      {item.children && item.children.length > 0 && (
         <div className="ml-6 space-y-1">
-          {filteredItems
-            .filter(item => item.parentId === collection.id)
-            .map(child => (
-              <button
-                key={child.id}
-                onContextMenu={(e) => handleContextMenu(e, child)}
-                className="w-full text-left px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition"
-              >
-                {child.label}
-              </button>
-            ))}
+          {item.children.map(child => renderCollectionItem(child))}
         </div>
-      </div>
-    ));
-  };
+      )}
+    </div>
+  );
 
   return (
     <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
       <div className="p-4">
-        <div className="relative">
+        <div className="relative mb-4">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search requests..."
+            placeholder="Search collections..."
             className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
           />
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
         </div>
-      </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-6">
-        <div className="space-y-2">
-          <div className="px-3 mb-2 flex items-center justify-between">
-            <div className="flex items-center">
-              <Book className="w-4 h-4 mr-2 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Collections</span>
-            </div>
-            <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-              <Settings className="w-4 h-4" />
+        <button
+          onClick={() => setShowNewCollectionInput(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition"
+        >
+          <Plus className="w-4 h-4" />
+          New Collection
+        </button>
+
+        {showNewCollectionInput && (
+          <div className="mt-2 flex gap-2">
+            <input
+              type="text"
+              value={newCollectionName}
+              onChange={(e) => setNewCollectionName(e.target.value)}
+              placeholder="Collection name"
+              className="flex-1 px-3 py-1 text-sm border rounded"
+              onKeyDown={(e) => e.key === 'Enter' && handleNewCollection()}
+              autoFocus
+            />
+            <button
+              onClick={handleNewCollection}
+              className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
+            >
+              Add
             </button>
           </div>
-          {renderCollectionItems()}
-        </div>
+        )}
+      </div>
 
-        <div>
-          <div className="px-3 mb-2 flex items-center">
-            <History className="w-4 h-4 mr-2 text-gray-400" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recent</span>
-          </div>
-          <div className="space-y-1">
-            {filteredItems
-              .filter(item => item.type === 'recent')
-              .map((item) => (
-                <button
-                  key={item.id}
-                  onContextMenu={(e) => handleContextMenu(e, item)}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  {item.label}
-                </button>
-              ))}
-          </div>
-        </div>
+      <nav className="flex-1 overflow-y-auto px-3 py-2">
+        {collections.map(collection => renderCollectionItem(collection))}
       </nav>
 
       {contextMenu && (

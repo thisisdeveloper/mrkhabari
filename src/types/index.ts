@@ -39,3 +39,11 @@ export interface HistoryItem {
   request: RequestTab;
   response?: ResponseData;
 }
+
+export interface CollectionItem {
+  id: string;
+  name: string;
+  type: 'collection' | 'folder' | 'request';
+  parentId?: string;
+  children?: CollectionItem[];
+}

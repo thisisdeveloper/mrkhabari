@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { RequestTab, ResponseData } from '../types';
 
+interface CollectionItem {
+  id: string;
+  name: string;
+  type: 'collection' | 'folder';
+  parentId?: string;
+  children: CollectionItem[];
+}
+
 interface AppState {
   tabs: RequestTab[];
   activeTab: string;
@@ -10,6 +18,7 @@ interface AppState {
   isLoading: boolean;
   history: RequestTab[];
   tabResponses: Record<string, ResponseData>;
+  collections: CollectionItem[];
   addTab: () => void;
   removeTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<RequestTab>) => void;
@@ -19,6 +28,9 @@ interface AppState {
   setTabResponse: (tabId: string, response: ResponseData) => void;
   setIsLoading: (loading: boolean) => void;
   addToHistory: (request: RequestTab) => void;
+  addCollection: (name: string, parentId?: string) => void;
+  updateCollection: (id: string, name: string) => void;
+  deleteCollection: (id: string) => void;
 }
 
 const DEFAULT_REQUEST: Partial<RequestTab> = {
@@ -48,7 +60,8 @@ const DEFAULT_STATE = {
   response: null,
   isLoading: false,
   history: [],
-  tabResponses: {}
+  tabResponses: {},
+  collections: []
 };
 
 export const useStore = create<AppState>()(
@@ -119,6 +132,37 @@ export const useStore = create<AppState>()(
       
       addToHistory: (request) => set((state) => ({
         history: [request, ...state.history].slice(0, 50) // Keep last 50 requests
+      })),
+
+      addCollection: (name, parentId) => set((state) => {
+        const newCollection: CollectionItem = {
+          id: Date.now().toString(),
+          name,
+          type: parentId ? 'folder' : 'collection',
+          parentId,
+          children: []
+        };
+        
+        return {
+          collections: parentId 
+            ? state.collections.map(c => {
+                if (c.id === parentId) {
+                  return { ...c, children: [...(c.children || []), newCollection] };
+                }
+                return c;
+              })
+            : [...state.collections, newCollection]
+        };
+      }),
+
+      updateCollection: (id, name) => set((state) => ({
+        collections: state.collections.map(c => 
+          c.id === id ? { ...c, name } : c
+        )
+      })),
+
+      deleteCollection: (id) => set((state) => ({
+        collections: state.collections.filter(c => c.id !== id)
       }))
     }),
     {
@@ -128,7 +172,8 @@ export const useStore = create<AppState>()(
         activeTab: state.activeTab,
         response: state.response,
         tabResponses: state.tabResponses,
-        history: state.history
+        history: state.history,
+        collections: state.collections
       })
     }
   )
