@@ -1,14 +1,7 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { RequestTab, ResponseData } from '../types';
-
-interface CollectionItem {
-  id: string;
-  name: string;
-  type: 'collection' | 'folder';
-  parentId?: string;
-  children: CollectionItem[];
-}
+import { RequestTab, ResponseData, CollectionItem } from '../types';
 
 interface AppState {
   tabs: RequestTab[];
@@ -62,6 +55,64 @@ const DEFAULT_STATE = {
   history: [],
   tabResponses: {},
   collections: []
+};
+
+// Helper function to recursively update collections
+const updateCollectionTree = (collections: CollectionItem[], id: string, updater: (item: CollectionItem) => CollectionItem): CollectionItem[] => {
+  return collections.map(collection => {
+    if (collection.id === id) {
+      return updater(collection);
+    }
+    
+    if (collection.children && collection.children.length > 0) {
+      return {
+        ...collection,
+        children: updateCollectionTree(collection.children, id, updater)
+      };
+    }
+    
+    return collection;
+  });
+};
+
+// Helper function to recursively delete an item
+const deleteCollectionItem = (collections: CollectionItem[], id: string): CollectionItem[] => {
+  return collections.filter(collection => {
+    if (collection.id === id) {
+      return false;
+    }
+    
+    if (collection.children && collection.children.length > 0) {
+      collection.children = deleteCollectionItem(collection.children, id);
+    }
+    
+    return true;
+  });
+};
+
+// Helper function to add an item to a parent
+const addCollectionItem = (collections: CollectionItem[], parentId: string | undefined, newItem: CollectionItem): CollectionItem[] => {
+  if (!parentId) {
+    return [...collections, newItem];
+  }
+  
+  return collections.map(collection => {
+    if (collection.id === parentId) {
+      return {
+        ...collection,
+        children: [...(collection.children || []), newItem]
+      };
+    }
+    
+    if (collection.children && collection.children.length > 0) {
+      return {
+        ...collection,
+        children: addCollectionItem(collection.children, parentId, newItem)
+      };
+    }
+    
+    return collection;
+  });
 };
 
 export const useStore = create<AppState>()(
@@ -144,25 +195,19 @@ export const useStore = create<AppState>()(
         };
         
         return {
-          collections: parentId 
-            ? state.collections.map(c => {
-                if (c.id === parentId) {
-                  return { ...c, children: [...(c.children || []), newCollection] };
-                }
-                return c;
-              })
-            : [...state.collections, newCollection]
+          collections: addCollectionItem(state.collections, parentId, newCollection)
         };
       }),
 
       updateCollection: (id, name) => set((state) => ({
-        collections: state.collections.map(c => 
-          c.id === id ? { ...c, name } : c
-        )
+        collections: updateCollectionTree(state.collections, id, item => ({
+          ...item,
+          name
+        }))
       })),
 
       deleteCollection: (id) => set((state) => ({
-        collections: state.collections.filter(c => c.id !== id)
+        collections: deleteCollectionItem(state.collections, id)
       }))
     }),
     {

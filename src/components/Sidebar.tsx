@@ -54,6 +54,29 @@ export function Sidebar() {
     setContextMenu(null);
   };
 
+  const filteredCollections = React.useMemo(() => {
+    if (!searchQuery.trim()) {
+      return collections;
+    }
+    
+    const filterItems = (items: CollectionItem[]): CollectionItem[] => {
+      return items.filter(item => {
+        const matchesName = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = filterItems(item.children);
+          item = { ...item, children: filteredChildren };
+          
+          return matchesName || filteredChildren.length > 0;
+        }
+        
+        return matchesName;
+      });
+    };
+    
+    return filterItems([...collections]);
+  }, [collections, searchQuery]);
+
   const renderCollectionItem = (item: CollectionItem) => (
     <div key={item.id} className="space-y-1">
       <button
@@ -115,7 +138,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        {collections.map(collection => renderCollectionItem(collection))}
+        {filteredCollections.map(collection => renderCollectionItem(collection))}
       </nav>
 
       {contextMenu && (
