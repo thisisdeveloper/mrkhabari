@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { RequestTab, ResponseData, CollectionItem } from '../types';
@@ -57,7 +56,6 @@ const DEFAULT_STATE = {
   collections: []
 };
 
-// Helper function to recursively update collections
 const updateCollectionTree = (collections: CollectionItem[], id: string, updater: (item: CollectionItem) => CollectionItem): CollectionItem[] => {
   return collections.map(collection => {
     if (collection.id === id) {
@@ -75,7 +73,6 @@ const updateCollectionTree = (collections: CollectionItem[], id: string, updater
   });
 };
 
-// Helper function to recursively delete an item
 const deleteCollectionItem = (collections: CollectionItem[], id: string): CollectionItem[] => {
   return collections.filter(collection => {
     if (collection.id === id) {
@@ -90,7 +87,6 @@ const deleteCollectionItem = (collections: CollectionItem[], id: string): Collec
   });
 };
 
-// Helper function to add an item to a parent
 const addCollectionItem = (collections: CollectionItem[], parentId: string | undefined, newItem: CollectionItem): CollectionItem[] => {
   if (!parentId) {
     return [...collections, newItem];
