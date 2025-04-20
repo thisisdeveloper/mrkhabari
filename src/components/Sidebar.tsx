@@ -1,5 +1,5 @@
 import React from 'react';
-import { FolderTree, Search, Plus, Folder, ChevronRight } from 'lucide-react';
+import { FolderTree, Search, Plus, Folder, ChevronRight, FileText } from 'lucide-react';
 import { ContextMenu } from './ContextMenu';
 import { useStore } from '../store';
 import { CollectionItem } from '../types';
@@ -12,7 +12,9 @@ export function Sidebar() {
   const [newCollectionName, setNewCollectionName] = React.useState('');
   const [editingItem, setEditingItem] = React.useState<{ id: string; name: string } | null>(null);
   const [addingFolderTo, setAddingFolderTo] = React.useState<{ parentId: string; name: string } | null>(null);
+  const [addingRequestTo, setAddingRequestTo] = React.useState<{ parentId: string; name: string } | null>(null);
   const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set());
+  const [newRequestName, setNewRequestName] = React.useState('');
 
   const handleContextMenu = (e: React.MouseEvent, item: CollectionItem) => {
     e.preventDefault();
@@ -45,12 +47,23 @@ export function Sidebar() {
     }
   };
 
+  const handleAddRequest = (parentId: string, name: string) => {
+    if (name.trim()) {
+      addCollection(name.trim(), parentId, 'request');
+      setAddingRequestTo(null);
+    }
+  };
+
   const handleAction = (action: string) => {
     if (!contextMenu) return;
 
     switch (action) {
       case 'new-folder':
         setAddingFolderTo({ parentId: contextMenu.item.id, name: '' });
+        setContextMenu(null);
+        break;
+      case 'new-request':
+        setAddingRequestTo({ parentId: contextMenu.item.id, name: '' });
         setContextMenu(null);
         break;
       case 'rename':
@@ -130,7 +143,7 @@ export function Sidebar() {
             className={`w-4 h-4 transition-transform ${expandedFolders.has(item.id) ? 'rotate-90' : ''} ${(!item.children || item.children.length === 0) ? 'invisible' : ''}`}
             onClick={(e) => toggleFolder(item.id, e)}
           />
-          {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+          {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : item.type === 'request' ? <FileText className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
           {item.name}
         </button>
       )}
@@ -142,12 +155,31 @@ export function Sidebar() {
             value={addingFolderTo.name}
             onChange={(e) => setAddingFolderTo({ ...addingFolderTo, name: e.target.value })}
             onKeyDown={(e) => e.key === 'Enter' && handleAddFolder(item.id, addingFolderTo.name)}
-            placeholder="Folder name"
             className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
             autoFocus
           />
           <button
             onClick={() => handleAddFolder(item.id, addingFolderTo.name)}
+            className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
+      {addingRequestTo?.parentId === item.id && (
+        <div className="mt-2 flex gap-2 px-6">
+          <input
+            type="text"
+            value={addingRequestTo.name}
+            onChange={(e) => setAddingRequestTo({ ...addingRequestTo, name: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddRequest(item.id, addingRequestTo.name)}
+            placeholder="Request name"
+            className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
+            autoFocus
+          />
+          <button
+            onClick={() => handleAddRequest(item.id, addingRequestTo.name)}
             className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
           >
             Add
