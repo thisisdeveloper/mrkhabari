@@ -1,5 +1,5 @@
 import React from 'react';
-import { FolderTree, Search, Plus, Folder } from 'lucide-react';
+import { FolderTree, Search, Plus, Folder, ChevronRight } from 'lucide-react';
 import { ContextMenu } from './ContextMenu';
 import { useStore } from '../store';
 import { CollectionItem } from '../types';
@@ -12,6 +12,7 @@ export function Sidebar() {
   const [newCollectionName, setNewCollectionName] = React.useState('');
   const [editingItem, setEditingItem] = React.useState<{ id: string; name: string } | null>(null);
   const [addingFolderTo, setAddingFolderTo] = React.useState<{ parentId: string; name: string } | null>(null);
+  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set());
 
   const handleContextMenu = (e: React.MouseEvent, item: CollectionItem) => {
     e.preventDefault();
@@ -65,6 +66,19 @@ export function Sidebar() {
     }
   };
 
+  const toggleFolder = (folderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
   const filteredCollections = React.useMemo(() => {
     if (!searchQuery.trim()) {
       return collections;
@@ -112,6 +126,10 @@ export function Sidebar() {
           onContextMenu={(e) => handleContextMenu(e, item)}
           className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
         >
+          <ChevronRight
+            className={`w-4 h-4 transition-transform ${expandedFolders.has(item.id) ? 'rotate-90' : ''} ${(!item.children || item.children.length === 0) ? 'invisible' : ''}`}
+            onClick={(e) => toggleFolder(item.id, e)}
+          />
           {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
           {item.name}
         </button>
@@ -137,7 +155,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {item.children && item.children.length > 0 && (
+      {item.children && item.children.length > 0 && expandedFolders.has(item.id) && (
         <div className="ml-6 space-y-1">
           {item.children.map(child => renderCollectionItem(child))}
         </div>
