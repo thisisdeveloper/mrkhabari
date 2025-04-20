@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { FolderTree, Search, Plus, Folder } from 'lucide-react';
 import { ContextMenu } from './ContextMenu';
@@ -11,6 +10,8 @@ export function Sidebar() {
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; item: CollectionItem } | null>(null);
   const [showNewCollectionInput, setShowNewCollectionInput] = React.useState(false);
   const [newCollectionName, setNewCollectionName] = React.useState('');
+  const [editingItem, setEditingItem] = React.useState<{ id: string; name: string } | null>(null);
+  const [addingFolderTo, setAddingFolderTo] = React.useState<{ parentId: string; name: string } | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent, item: CollectionItem) => {
     e.preventDefault();
@@ -29,29 +30,39 @@ export function Sidebar() {
     }
   };
 
+  const handleRename = (id: string, newName: string) => {
+    if (newName.trim()) {
+      updateCollection(id, newName.trim());
+      setEditingItem(null);
+    }
+  };
+
+  const handleAddFolder = (parentId: string, name: string) => {
+    if (name.trim()) {
+      addCollection(name.trim(), parentId);
+      setAddingFolderTo(null);
+    }
+  };
+
   const handleAction = (action: string) => {
     if (!contextMenu) return;
 
     switch (action) {
       case 'new-folder':
-        const folderName = prompt('Enter folder name:');
-        if (folderName) {
-          addCollection(folderName, contextMenu.item.id);
-        }
+        setAddingFolderTo({ parentId: contextMenu.item.id, name: '' });
+        setContextMenu(null);
         break;
       case 'rename':
-        const newName = prompt('Enter new name:', contextMenu.item.name);
-        if (newName) {
-          updateCollection(contextMenu.item.id, newName);
-        }
+        setEditingItem({ id: contextMenu.item.id, name: contextMenu.item.name });
+        setContextMenu(null);
         break;
       case 'delete':
         if (confirm('Are you sure you want to delete this item?')) {
           deleteCollection(contextMenu.item.id);
         }
+        setContextMenu(null);
         break;
     }
-    setContextMenu(null);
   };
 
   const filteredCollections = React.useMemo(() => {
@@ -79,13 +90,53 @@ export function Sidebar() {
 
   const renderCollectionItem = (item: CollectionItem) => (
     <div key={item.id} className="space-y-1">
-      <button
-        onContextMenu={(e) => handleContextMenu(e, item)}
-        className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
-      >
-        {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
-        {item.name}
-      </button>
+      {editingItem?.id === item.id ? (
+        <div className="mt-2 flex gap-2 px-3">
+          <input
+            type="text"
+            value={editingItem.name}
+            onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && handleRename(item.id, editingItem.name)}
+            className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
+            autoFocus
+          />
+          <button
+            onClick={() => handleRename(item.id, editingItem.name)}
+            className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
+          >
+            Save
+          </button>
+        </div>
+      ) : (
+        <button
+          onContextMenu={(e) => handleContextMenu(e, item)}
+          className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
+        >
+          {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+          {item.name}
+        </button>
+      )}
+
+      {addingFolderTo?.parentId === item.id && (
+        <div className="mt-2 flex gap-2 px-6">
+          <input
+            type="text"
+            value={addingFolderTo.name}
+            onChange={(e) => setAddingFolderTo({ ...addingFolderTo, name: e.target.value })}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddFolder(item.id, addingFolderTo.name)}
+            placeholder="Folder name"
+            className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
+            autoFocus
+          />
+          <button
+            onClick={() => handleAddFolder(item.id, addingFolderTo.name)}
+            className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
       {item.children && item.children.length > 0 && (
         <div className="ml-6 space-y-1">
           {item.children.map(child => renderCollectionItem(child))}
