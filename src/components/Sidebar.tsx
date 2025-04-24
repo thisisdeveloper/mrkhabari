@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+// Remove the unused React import or use React.ReactNode if needed
+import { useState } from 'react';
 import { useStore } from '../store';
 import { ChevronRight, ChevronDown, Plus, File, Trash } from 'lucide-react';
 
