@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MessageSquareShare, Github, Moon, Sun } from 'lucide-react';
 
@@ -6,15 +7,27 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const [isDark, setIsDark] = React.useState(false);
+  const [isDark, setIsDark] = React.useState(() => {
+    // Check if dark mode was previously set in localStorage or system preference
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark' || 
+           (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
 
   React.useEffect(() => {
+    // Toggle dark class on html element
     if (isDark) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -44,7 +57,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsDark(!isDark)}
+              onClick={toggleTheme}
               className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition"
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
