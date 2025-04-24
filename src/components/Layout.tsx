@@ -59,6 +59,7 @@ export function Layout({ children }: LayoutProps) {
             <button 
               onClick={toggleTheme}
               className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition"
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -73,7 +74,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden dark:bg-gray-900">
         {children}
       </main>
     </div>

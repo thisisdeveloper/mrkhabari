@@ -1,255 +1,159 @@
-import React from 'react';
-import { FolderTree, Search, Plus, Folder, ChevronRight, FileText } from 'lucide-react';
-import { ContextMenu } from './ContextMenu';
+
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { CollectionItem } from '../types';
+import { ChevronRight, ChevronDown, Plus, File, Trash } from 'lucide-react';
 
 export function Sidebar() {
-  const { collections, addCollection, updateCollection, deleteCollection } = useStore();
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; item: CollectionItem } | null>(null);
-  const [showNewCollectionInput, setShowNewCollectionInput] = React.useState(false);
-  const [newCollectionName, setNewCollectionName] = React.useState('');
-  const [editingItem, setEditingItem] = React.useState<{ id: string; name: string } | null>(null);
-  const [addingFolderTo, setAddingFolderTo] = React.useState<{ parentId: string; name: string } | null>(null);
-  const [addingRequestTo, setAddingRequestTo] = React.useState<{ parentId: string; name: string } | null>(null);
-  const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set());
-  const [newRequestName, setNewRequestName] = React.useState('');
+  const [activeFolder, setActiveFolder] = useState<number | null>(null);
 
-  const handleContextMenu = (e: React.MouseEvent, item: CollectionItem) => {
-    e.preventDefault();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      item
-    });
-  };
+  // Fix: removing unused state variable
+  // const [newRequestName, setNewRequestName] = useState('');
+  
+  const {
+    folders,
+    selectedRequest,
+    addRequest,
+    deleteRequest,
+    selectRequest,
+    addFolder,
+    deleteFolder,
+  } = useStore();
 
-  const handleNewCollection = () => {
-    if (newCollectionName.trim()) {
-      addCollection(newCollectionName.trim());
-      setNewCollectionName('');
-      setShowNewCollectionInput(false);
+  const toggleFolder = (folderId: number) => {
+    if (activeFolder === folderId) {
+      setActiveFolder(null);
+    } else {
+      setActiveFolder(folderId);
     }
   };
 
-  const handleRename = (id: string, newName: string) => {
-    if (newName.trim()) {
-      updateCollection(id, newName.trim());
-      setEditingItem(null);
-    }
+  const handleAddRequest = (folderId: number | null) => {
+    const name = `New Request ${Math.floor(Math.random() * 1000)}`;
+    // Fix: pass only 2 arguments as expected
+    addRequest(name, folderId);
   };
-
-  const handleAddFolder = (parentId: string, name: string) => {
-    if (name.trim()) {
-      addCollection(name.trim(), parentId);
-      setAddingFolderTo(null);
-    }
-  };
-
-  const handleAddRequest = (parentId: string, name: string) => {
-    if (name.trim()) {
-      addCollection(name.trim(), parentId, 'request');
-      setAddingRequestTo(null);
-    }
-  };
-
-  const handleAction = (action: string) => {
-    if (!contextMenu) return;
-
-    switch (action) {
-      case 'new-folder':
-        setAddingFolderTo({ parentId: contextMenu.item.id, name: '' });
-        setContextMenu(null);
-        break;
-      case 'new-request':
-        setAddingRequestTo({ parentId: contextMenu.item.id, name: '' });
-        setContextMenu(null);
-        break;
-      case 'rename':
-        setEditingItem({ id: contextMenu.item.id, name: contextMenu.item.name });
-        setContextMenu(null);
-        break;
-      case 'delete':
-        if (confirm('Are you sure you want to delete this item?')) {
-          deleteCollection(contextMenu.item.id);
-        }
-        setContextMenu(null);
-        break;
-    }
-  };
-
-  const toggleFolder = (folderId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedFolders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderId)) {
-        newSet.delete(folderId);
-      } else {
-        newSet.add(folderId);
-      }
-      return newSet;
-    });
-  };
-
-  const filteredCollections = React.useMemo(() => {
-    if (!searchQuery.trim()) {
-      return collections;
-    }
-    
-    const filterItems = (items: CollectionItem[]): CollectionItem[] => {
-      return items.filter(item => {
-        const matchesName = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        if (item.children && item.children.length > 0) {
-          const filteredChildren = filterItems(item.children);
-          item = { ...item, children: filteredChildren };
-          
-          return matchesName || filteredChildren.length > 0;
-        }
-        
-        return matchesName;
-      });
-    };
-    
-    return filterItems([...collections]);
-  }, [collections, searchQuery]);
-
-  const renderCollectionItem = (item: CollectionItem) => (
-    <div key={item.id} className="space-y-1">
-      {editingItem?.id === item.id ? (
-        <div className="mt-2 flex gap-2 px-3">
-          <input
-            type="text"
-            value={editingItem.name}
-            onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && handleRename(item.id, editingItem.name)}
-            className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
-            autoFocus
-          />
-          <button
-            onClick={() => handleRename(item.id, editingItem.name)}
-            className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
-          >
-            Save
-          </button>
-        </div>
-      ) : (
-        <button
-          onContextMenu={(e) => handleContextMenu(e, item)}
-          className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition flex items-center gap-2"
-        >
-          <ChevronRight
-            className={`w-4 h-4 transition-transform ${expandedFolders.has(item.id) ? 'rotate-90' : ''} ${(!item.children || item.children.length === 0) ? 'invisible' : ''}`}
-            onClick={(e) => toggleFolder(item.id, e)}
-          />
-          {item.type === 'collection' ? <FolderTree className="w-4 h-4" /> : item.type === 'request' ? <FileText className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
-          {item.name}
-        </button>
-      )}
-
-      {addingFolderTo?.parentId === item.id && (
-        <div className="mt-2 flex gap-2 px-6">
-          <input
-            type="text"
-            value={addingFolderTo.name}
-            onChange={(e) => setAddingFolderTo({ ...addingFolderTo, name: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddFolder(item.id, addingFolderTo.name)}
-            className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
-            autoFocus
-          />
-          <button
-            onClick={() => handleAddFolder(item.id, addingFolderTo.name)}
-            className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
-          >
-            Add
-          </button>
-        </div>
-      )}
-
-      {addingRequestTo?.parentId === item.id && (
-        <div className="mt-2 flex gap-2 px-6">
-          <input
-            type="text"
-            value={addingRequestTo.name}
-            onChange={(e) => setAddingRequestTo({ ...addingRequestTo, name: e.target.value })}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddRequest(item.id, addingRequestTo.name)}
-            placeholder="Request name"
-            className="flex-1 px-3 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600"
-            autoFocus
-          />
-          <button
-            onClick={() => handleAddRequest(item.id, addingRequestTo.name)}
-            className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
-          >
-            Add
-          </button>
-        </div>
-      )}
-
-      {item.children && item.children.length > 0 && expandedFolders.has(item.id) && (
-        <div className="ml-6 space-y-1">
-          {item.children.map(child => renderCollectionItem(child))}
-        </div>
-      )}
-    </div>
-  );
 
   return (
-    <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
-      <div className="p-4">
-        <div className="relative mb-4">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search collections..."
-            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-          />
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-        </div>
-
-        <button
-          onClick={() => setShowNewCollectionInput(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition"
-        >
-          <Plus className="w-4 h-4" />
-          New Collection
-        </button>
-
-        {showNewCollectionInput && (
-          <div className="mt-2 flex gap-2">
-            <input
-              type="text"
-              value={newCollectionName}
-              onChange={(e) => setNewCollectionName(e.target.value)}
-              placeholder="Collection name"
-              className="flex-1 px-3 py-1 text-sm border rounded"
-              onKeyDown={(e) => e.key === 'Enter' && handleNewCollection()}
-              autoFocus
-            />
+    <div className="w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 overflow-y-auto">
+      <div className="p-4 flex flex-col h-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-200">Requests</h2>
+          <div className="flex space-x-1">
             <button
-              onClick={handleNewCollection}
-              className="px-3 py-1 text-sm bg-emerald-500 text-white rounded hover:bg-emerald-600"
+              onClick={() => addFolder('New Folder')}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
+              aria-label="Add folder"
             >
-              Add
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => handleAddRequest(null)}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
+              aria-label="Add request"
+            >
+              <File className="w-3.5 h-3.5" />
             </button>
           </div>
-        )}
+        </div>
+
+        <div className="space-y-1">
+          {folders.map((folder) => (
+            <div key={folder.id} className="text-sm">
+              <div
+                className="flex justify-between items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                onClick={() => toggleFolder(folder.id)}
+              >
+                <div className="flex items-center">
+                  {activeFolder === folder.id ? (
+                    <ChevronDown className="w-4 h-4 text-gray-400 mr-2" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-400 mr-2" />
+                  )}
+                  <span className="text-gray-800 dark:text-gray-200">{folder.name}</span>
+                </div>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddRequest(folder.id);
+                    }}
+                    className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-400"
+                    aria-label="Add request to folder"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteFolder(folder.id);
+                    }}
+                    className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-gray-500 dark:text-gray-400"
+                    aria-label="Delete folder"
+                  >
+                    <Trash className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              {activeFolder === folder.id && folder.requests.length > 0 && (
+                <div className="ml-6 mt-1 space-y-1">
+                  {folder.requests.map((request) => (
+                    <div
+                      key={request.id}
+                      className={`flex justify-between items-center p-2 rounded cursor-pointer ${
+                        selectedRequest?.id === request.id
+                          ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                      onClick={() => selectRequest(request.id)}
+                    >
+                      <span>{request.name}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteRequest(request.id);
+                        }}
+                        className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded opacity-0 group-hover:opacity-100 text-gray-500 dark:text-gray-400"
+                        aria-label="Delete request"
+                      >
+                        <Trash className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div className="mt-2">
+            {/* Standalone requests outside folders */}
+            {folders
+              .find((f) => f.id === 0)
+              ?.requests.map((request) => (
+                <div
+                  key={request.id}
+                  className={`group flex justify-between items-center p-2 rounded cursor-pointer ${
+                    selectedRequest?.id === request.id
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                  onClick={() => selectRequest(request.id)}
+                >
+                  <span>{request.name}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteRequest(request.id);
+                    }}
+                    className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded opacity-0 group-hover:opacity-100 text-gray-500 dark:text-gray-400"
+                    aria-label="Delete request"
+                  >
+                    <Trash className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
       </div>
-
-      <nav className="flex-1 overflow-y-auto px-3 py-2">
-        {filteredCollections.map(collection => renderCollectionItem(collection))}
-      </nav>
-
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          onAction={handleAction}
-        />
-      )}
     </div>
   );
 }
